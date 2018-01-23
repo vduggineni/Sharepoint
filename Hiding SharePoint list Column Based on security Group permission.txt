@@ -1,0 +1,24 @@
+<script language="javascript" type="text/javascript" src="/sites/Developer/Style%20Library/js/jquery-3.2.1.min.js"></script>
+<script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.SPServices/2014.02/jquery.SPServices-2014.02.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+  $().SPServices({
+    operation: "GetGroupCollectionFromUser",
+    userLoginName: $().SPServices.SPGetCurrentUser(),
+    async: false,
+       completefunc: function (xData, Status) {
+       var xml = xData.responseXML.xml;
+       if($(xData.responseXML).find("Group[Name='SecurityGroupName']").length == 1)
+	{
+        
+        $('nobr:contains("FieldName")').closest('tr').show();   
+  	}
+	else
+	{
+	
+	 $('nobr:contains("FieldName")').closest('tr').hide(); 
+	}
+     }
+  });
+});
+</script>
