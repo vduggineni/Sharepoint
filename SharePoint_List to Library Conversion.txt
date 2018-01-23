@@ -1,0 +1,140 @@
+using System;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Web.UI.WebControls.WebParts;
+using Microsoft.SharePoint;
+using System.IO;
+
+namespace VisualWebPartProject1.VisualWebPart1
+{
+    public partial class VisualWebPart1UserControl : UserControl
+    {
+        protected void Page_Load(object sender, EventArgs e)
+        {
+        }
+
+        protected void Button1_Click(object sender, EventArgs e)
+        {
+            using (SPSite site = new SPSite("http://vamsi-home/sites/Practice/"))
+            {
+                using (SPWeb web = site.OpenWeb())
+                {
+                    string List_Name = ListName.Text;
+                    SPList list = web.Lists.TryGetList(List_Name);
+
+                    try
+                    {
+                        if (list != null)
+                        {
+
+
+                            string LibName = List_Name + "_" + "library";
+                            SPList lib_Check = web.Lists.TryGetList(LibName);
+
+                            if (lib_Check == null)
+                            {
+
+
+                                SPListTemplate listTemplate = web.ListTemplates["Document Library"];
+                                Guid myguid = web.Lists.Add(LibName, "", listTemplate);
+                                SPDocumentLibrary library = web.Lists[myguid] as SPDocumentLibrary;
+                                library.OnQuickLaunch = true;
+
+
+                                SPView listView = web.Lists[List_Name].Views["All Items"];
+                                string columnname = "";
+                                SPListItemCollection listitems = list.GetItems(listView);
+                                SPViewFieldCollection viewfieldCollection = listView.ViewFields;
+
+
+                                foreach (SPListItem item in listitems)
+                                {
+                                    SPList library_fieldcheck = web.Lists.TryGetList(LibName);
+                                    SPFieldCollection Fieldcheck = library_fieldcheck.Fields;
+
+
+                                    SPAttachmentCollection collAttachments = item.Attachments;
+                                    foreach (string filename in collAttachments)
+                                    {
+                                        SPFile attFile = item.ParentList.ParentWeb.GetFile(item.Attachments.UrlPrefix + filename);
+                                        string fileRead = item.Attachments.UrlPrefix.ToString() + filename;
+                                        StreamReader fsReader = new StreamReader(attFile.OpenBinaryStream());
+                                        Stream fStream = fsReader.BaseStream;
+                                        byte[] contents = new byte[fStream.Length];
+                                        fStream.Read(contents, 0, (int)fStream.Length);
+                                        fStream.Close();
+                                        fStream.Dispose();
+                                        Boolean replaceExistingFiles = true;
+                                        SPFolder libFolder = web.Folders[LibName];
+                                        SPFile file = libFolder.Files.Add(filename, contents, replaceExistingFiles);
+                                        library.Update();
+                                        foreach (String viewFieldName in viewfieldCollection)
+                                        {
+
+                                            SPList list1 = web.Lists.TryGetList(List_Name);
+
+                                            SPField field = list1.Fields[viewFieldName];
+                                            SPFieldType fieldType = field.Type;
+                                            columnname = field.Title;
+                                            if (Fieldcheck.ContainsField(field.ToString()))
+                                            {
+                                                file.Item[field.ToString()] = item[field.ToString()];
+                                                file.Item.Update();
+                                                file.Update();
+                                                break;
+                                            }
+
+                                            else
+                                            {
+                                                if (columnname == "Attachments")
+                                                {
+                                                    break;
+                                                }
+                                                library.Fields.Add(field.ToString(), fieldType, false);
+
+                                                library.Update();
+                                                SPView view = library.DefaultView;
+                                                view.ViewFields.Add(columnname);
+                                                view.Update();
+                                            }
+                                            status.Text = item[field.ToString()].ToString();
+                                            file.Item[field.ToString()] = item[field.ToString()];
+                                            file.Item.Update();
+                                            file.Update();
+                                            library.Update();
+                                            web.Update();
+                                        }
+
+                                    }
+
+                                }
+
+                                status.Text = "Created new library with name" + "---->" + LibName;
+                            }
+                            else
+                            {
+                                status.Text = "Already library has been created for this list";
+                            }
+                        }
+
+                        else
+                        {
+                            status.Text = "No list with this name exist";
+                        }
+                    }
+
+
+                    catch (Exception Ex)
+                    {
+                        status.Text = Ex.Message;
+
+
+                    }
+                }
+            }
+
+        }
+    }
+}
+    
+
